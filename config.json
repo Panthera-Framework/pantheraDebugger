@@ -1,4 +1,4 @@
 {
 	"workMode": "standalone",
-	"requestsMaxCount": 5
+	"requestsMaxCount": 15
 }

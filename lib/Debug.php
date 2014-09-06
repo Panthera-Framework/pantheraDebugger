@@ -42,6 +42,7 @@ class pantheraDebugger extends pSingleton
 	public $debuggerWebroot = '';
 	public $config = array();
     public $db = array();
+    public $request = null;
 
 	/**
 	 * Constructor, creates also a template engine object
@@ -51,6 +52,8 @@ class pantheraDebugger extends pSingleton
 
 	public function __construct()
 	{
+	    static::addInstance($this);
+        
 		// calculate paths
 		$f = realpath(__FILE__);
 		$documentRoot = realpath($_SERVER['DOCUMENT_ROOT']);
@@ -89,7 +92,27 @@ class pantheraDebugger extends pSingleton
         }
 
         $this -> db = new writableJSON(self::$debuggerPath. '/database.json');
+        
+        $this -> handleJSONRequests();
 	}
+
+    /**
+     * Handle JSON requests
+     * 
+     * @author Damian Kęska <webnull.www@gmail.com>
+     * @return null
+     */
+
+    public function handleJSONRequests()
+    {
+        if (isset($_GET['jsonRequest']))
+        {
+            $request = 'jsonRequest' .ucfirst($_GET['jsonRequest']);
+            
+            if (method_exists($this, $request))
+                $this -> $request();
+        }
+    }
 
 	/**
 	 * Load configuration file from path or array
@@ -160,8 +183,8 @@ class pantheraDebugger extends pSingleton
 
 	public function sendInlineDump($functionName, $backtraceLog, $output)
 	{
-		$this->inline[] = array(
-			$functionName, $backtraceLog['file']. ':' .$backtraceLog['line'], $output,
+		$this -> inline[] = array(
+			'Used function' => $functionName, 'File' => $backtraceLog['file']. ':' .$backtraceLog['line'], 'Output' => $output,
 		);
 	}
 
@@ -279,25 +302,25 @@ class pantheraDebugger extends pSingleton
 			return false;
         
 		$debuggerData = array();
-
+        
 		/**
 		 * Load generated data from dump
 		 */
 
 		if (defined('InsidePantheraDebugger'))
 		{
-			if (isset($_GET['dumpID']) || $fileName)
+			if (isset($_GET['sessionKey']) || $fileName)
 			{
-			    if (isset($_GET['dumpID']) && $_GET['dumpID'])
-                    $fileName = $_GET['dumpID'];
+			    if (isset($_GET['sessionKey']) && $_GET['sessionKey'])
+                    $fileName = $_GET['sessionKey'];
                 
-				$dump = self::getContentDir('dumps/' .addslashes($fileName));
-				$debuggerData = json_decode(file_get_contents($dump), true);
+				$dump = realpath(self::getContentDir('dumps/' .addslashes($fileName)));
+				$debuggerData = unserialize(file_get_contents($dump));
 			}
 
 		}
-
-		if (!$debuggerData)
+        
+		if (!$debuggerData && !isset($_GET['jsonRequest']))
 		{
 			/**
 			 * Generate data by application
@@ -316,6 +339,18 @@ class pantheraDebugger extends pSingleton
 					'request' => array(
 						'title' => 'Request',
 						'template' => 'request',
+						'Query' => array(
+                            '$_GET' => $_GET,
+                            '$_POST' => $_POST,
+                            '$_REQUEST' => $_REQUEST,
+                        ),
+                        '$_FILES' => $_FILES,
+                        'Session' => array(
+                            '$_COOKIE' => $_COOKIE,
+                            '$_SESSION' => $_SESSION,
+                        ),
+						'$_SERVER' => $_SERVER,
+						'$_ENV' => $_ENV,
 					),
 
 					'log' => array(
@@ -326,13 +361,13 @@ class pantheraDebugger extends pSingleton
 
 					'includes' => array(
 						'title' => 'Included files',
-						'data' => $this->arrayToNumericKeys(get_included_files()),
+						'data' => get_included_files(),
 						'template' => 'includes',
 					),
 
 					'constants' => array(
 						'title' => 'Constants',
-						'data' => $this->arrayToNumericKeys(get_defined_constants()),
+						'data' => get_defined_constants(),
 						'template' => 'constants',
 					),
 				),
@@ -347,15 +382,15 @@ class pantheraDebugger extends pSingleton
             return $debuggerData;
         
 		$this -> popupDisplayed = true;
-
+        
         // load main template
 		require_once self::getContentDir('templates/content.tpl.php');
         
 		if (basename(__FILE__) == 'Debug.php' and defined('InsidePantheraDebugger'))
-			overlayContent($debuggerData, $this);
+			overlayContent($debuggerData, $this, $fileName);
 		elseif ($this -> config['workMode'] == 'embedded') {
 		    ob_start();
-		    overlayContent($debuggerData, $this);
+		    overlayContent($debuggerData, $this, $fileName);
             $content = ob_get_clean();
             ob_end_clean();
             
@@ -376,17 +411,24 @@ class pantheraDebugger extends pSingleton
      * @param string $path XPath to get froma array
      */
 
-    public function ajaxRequestGetData($tabName, $fileName, $path='/')
+    public function jsonRequestGetData($tabName='', $fileName='', $path='/')
     {
+        if (!$tabName) $tabName = $_GET['tabName'];
+        if (!$fileName) $fileName = $_GET['fileName'];
+        if (!$path) $path = $_GET['path'];
+        
         $sessions = $this -> db -> get('sessions');
         
         if (isset($sessions[$fileName]))
         {
             $dumpsDir = self::getContentDir('dumps/');
-            $data = json_decode(file_get_contents($dumpsDir. '/' .$fileName));
+            $data = unserialize(file_get_contents($dumpsDir. '/' .$fileName));
             $array = arrays::arrayXpathWalk($data['data'][$tabName], $path);
             
-            print(json_encode($array));
+            print(json_encode(array(
+                'status' => 'success',
+                'data' => $array,
+            )));
             exit;
         }
     }
@@ -398,34 +440,41 @@ class pantheraDebugger extends pSingleton
      * @param string $fileName File name
      */
     
-    public function ajaxRequestGetTab($tabName, $fileName)
+    public function jsonRequestGetTab($tabName='', $fileName='')
     {
-        $debuggerData = $this -> displayOverlay(true, $fileName);
+        if (!$tabName) $tabName = $_GET['tabName'];
+        if (!$fileName) $fileName = $_GET['fileName'];
         
-        if (!isset($debuggerData['data'][$tabName]))
+        $debuggerData = $this -> request = $this -> displayOverlay(true, $fileName);
+        
+        if (isset($debuggerData['data'][$tabName]))
         {
             $tplFile = self::getContentDir('templates/' .$debuggerData['data'][$tabName]['template']. '.tpl.php');
             
             if (!$tplFile)
             {
-                print(json_encode(array(
+                die(json_encode(array(
                     'status' => 'failed',
                     'message' => 'Cannot find template "' .$debuggerData['data'][$tabName]['template']. '.tpl.php"',
                 )));
             }
+
+            $tabData = $debuggerData['data'][$tabName];
             
             ob_start();
             require $tplFile;
             $content = ob_get_clean();
             ob_end_clean();
             
-            print(json_encode(array(
+            die(json_encode(array(
                 'status' => 'success',
                 'data' => $content,
             )));
             
+            exit;
+            
         } else {
-            print(json_encode(array(
+            die(json_encode(array(
                 'status' => 'failed',
                 'message' => 'Tab "' .$tabName. '" does not exists',
             )));
@@ -596,9 +645,31 @@ function r_dump()
 
 	$return = ob_get_clean();
 	$dbg = getPantheraDebugger();
-
+    
 	if ($dbg)
 		$dbg -> sendInlineDump('r_dump', array_shift($bt), $return);
 
 	return $return;
+}
+
+/**
+ * Normalize array before encoding to JSON. Eliminates possible encoding errors described on PHP.net
+ * 
+ * @param array $array Input array
+ * @return array
+ */
+
+function normalizeForJSON($array)
+{
+    foreach ($array as $key => &$value)
+    {
+        if (is_numeric($value) && (is_infinite($value) || is_nan($value)))
+        {
+            $value = "".substr($value, 0, 5)."";
+        } elseif (is_array($value)) {
+            $value = normalizeJSON($value);
+        }
+    }
+    
+    return $array;
 }

@@ -21,7 +21,7 @@ abstract class pSingleton
 
 		if (!isset(static::$__instance[$c]))
 			static::$__instance[get_called_class()] = new static;
-
+        
 		return static::$__instance[$c];
 	}
 
@@ -32,8 +32,8 @@ abstract class pSingleton
 	 * @return null
 	 */
 
-	public static function addInstance($this)
+	public static function addInstance($name)
 	{
-		static::$__instance[get_called_class()] = $this;
+		static::$__instance[get_called_class()] = $name;
 	}
 }

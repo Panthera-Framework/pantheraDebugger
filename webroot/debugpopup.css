@@ -332,7 +332,7 @@ a:active {
 
 /* Panthera table */
 
-table {
+.pantheraTable table {
 	display: table;
 	vertical-align: top;
 	/* border: 1px solid #b8bcbf; */
@@ -345,11 +345,11 @@ table {
 	color: black;
 }
 
-thead {
+.pantheraTable thead {
 	background-color: #56687b;
 }
 
-th {
+.pantheraTable th {
 	padding-left: 7px;
 	font-weight: 200;
 	color: #fff;
@@ -357,33 +357,33 @@ th {
 	height: 22px;
 }
 
-th a {
+.pantheraTable th a {
 	color: #fff;
 }
 
-tfoot {
+.pantheraTable tfoot {
 	border-bottom: 0px;
 	background-color: #56687b;
 }
 
-tfoot td, tfoot, tfoot th {
+.pantheraTable tfoot td, tfoot, tfoot th {
 	border: 0px;
 }
 
-tfoot th {
+.pantheraTable tfoot th {
 	font-size: 11px;
 	color: #b8bcbf;
 }
 
-thead th {
+.pantheraTable thead th {
 	padding-right: 5px;
 }
 
-tbody {
+.pantheraTable tbody {
 	background-color: #fff;
 }
 
-td {
+.pantheraTable td {
 	border-right: 1px solid #b8bcbf;
 	border-bottom: 1px solid #b8bcbf;
 	border-left: 1px solid #b8bcbf;
@@ -399,7 +399,7 @@ td {
 	transition-duration: 0.15s;
 }
 
-tbody tr:nth-child(even) {
+.pantheraTable tbody tr:nth-child(even) {
 	background-color: #f3f3f3;
 }
 

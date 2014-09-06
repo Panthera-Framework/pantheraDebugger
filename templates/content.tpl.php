@@ -1,7 +1,7 @@
 <?php
 if (!function_exists('overlayContent'))
 {
-    function overlayContent($debuggerData, $debugger)
+    function overlayContent($debuggerData, $debugger, $fileName)
     {
     	?><html>
     	<head>
@@ -9,36 +9,31 @@ if (!function_exists('overlayContent'))
     		<meta charset="utf-8">
     		<link rel="stylesheet" type="text/css" href="<?=$debugger->debuggerWebroot;?>/webroot/debugpopup.css">
     		<script type="text/javascript" src="<?=$debugger->debuggerWebroot;?>/webroot/jquery.js"></script>
+    		<script type="text/javascript" src="<?=$debugger->debuggerWebroot;?>/webroot/panthera.js"></script>
+    		<link rel="stylesheet" type="text/css" href="<?=$debugger->debuggerWebroot;?>/webroot/jsoneditor/jsoneditor.min.css">
+            <script type="text/javascript" src="<?=$debugger->debuggerWebroot;?>/webroot/jsoneditor/jsoneditor.min.js"></script>
     
     		<script type="text/javascript">
-    		$(document).ready(function() {
-    			i = 0;
-    
-    			htmlCode = "";
-    
-    			x = 0;  //horizontal coord
-    			y = document.height; //vertical coord
-    
-    			if (!localStorage.getItem("debpopupTab") || localStorage.getItem("debpopupTab") == "debug")
-    			{
-    				window.scroll(x,y);
-    			}
-    
-    			if (localStorage.getItem("debpopupTab"))
-    			{
-    				showTable(localStorage.getItem("debpopupTab"));
-    			}
-    		});
+            var fileName = '<?php print($fileName);?>';
     
     		function showTable(tabName)
     		{
-    			if ($("#tab_"+tabName).length)
-    			{
-    				$(".allTabs").hide();
-    				$("#tab_"+tabName).show();
-    				localStorage.setItem("debpopupTab", tabName);
-    			}
+    		    $('#ajaxResponseContent').html('');
+    		    
+    			panthera.jsonPOST({
+    			    'url': '?jsonRequest=getTab&fileName='+fileName+'&tabName='+tabName,
+    			    'success': function (response) {
+    			        if (response.status == 'success')
+    			        {
+    			            $('#ajaxResponseContent').html(response.data);
+    			        }
+    			    }
+    			});
     		}
+    		
+    		$(document).ready(function () {
+    		    showTable('request');
+    		});
     		</script>
     	</head>
     
@@ -48,11 +43,11 @@ if (!function_exists('overlayContent'))
     				<span><a>Panthera Debugger</a></span>
     				
                     <div class="userBar">
-                        <select id="sessionSelection">';
+                        <select id="sessionSelection" onchange="window.location.href = '?sessionKey='+this.value;">';
                         
                         <?php
-                        foreach ($debuggerData['session'] as $sessionName)
-                            print('<option value="' .$sessionName. '">' .$sessionName. '</option>');
+                        foreach ($debugger -> db -> sessions as $sessionKey => $sessionName)
+                            print('<option value="' .$sessionKey. '" ' .($fileName == $sessionKey ? 'selected' : ''). '>' .$sessionName. '</option>');
                         ?>
                         </select>
                     </div>
@@ -68,8 +63,8 @@ if (!function_exists('overlayContent'))
     						if ($value['data'] or isset($value['template']))
     						{
     							?><span class="menuItem">
-    								<a onclick="showTable(\'<?=$key;?>\');">
-    									<img src="<?=$debugger->debuggerWebroot;?>. '/webroot/transparent.png" class="pantheraIcon menuIcon" alt="<?=$value['title'];?>">
+    								<a onclick="showTable('<?=$key;?>');">
+    									<img src="<?=$debugger->debuggerWebroot;?>/webroot/transparent.png" class="pantheraIcon menuIcon" alt="<?=$value['title'];?>">
     									<span class="menuText"><?=$value['title'];?></span>
     								</a>
     							</span>
@@ -81,7 +76,7 @@ if (!function_exists('overlayContent'))
     			</div>
     		</div>
     
-    		<div id="ajax_content" class="centerWithContent popupContent">
+    		<div id="ajaxResponseContent" class="centerWithContent popupContent">
     		</div>
         </body>
     </html>
