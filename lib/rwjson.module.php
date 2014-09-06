@@ -33,7 +33,8 @@ class writableJSON
 
     public function __construct ($file, $fallback=null)
     {
-        $panthera = pantheraCore::getInstance();
+        if (class_exists('pantheraCore'))
+            $panthera = pantheraCore::getInstance();
 
         if (!is_file($file) or !is_readable($file))
             throw new Exception('Cannot open file "' .$file. '", check read permissions');
@@ -52,12 +53,16 @@ class writableJSON
             if (is_array($fallback))
             {
                 $this -> db = array_merge($this -> db, $fallback);
-                $panthera -> logging -> output('Merged ' .count($fallback). ' entries from fallback', 'rwjson');
+                
+                if (class_exists('pantheraCore'))
+                    $panthera -> logging -> output('Merged ' .count($fallback). ' entries from fallback', 'rwjson');
             }
         }
 
         $this -> db = array_merge($this -> db, (array)json_decode(file_get_contents($file), true));
-        $panthera -> add_option('session_save', array($this, 'save'));
+        
+        if (class_exists('pantheraCore'))
+            $panthera -> add_option('session_save', array($this, 'save'));
     }
 
     /**

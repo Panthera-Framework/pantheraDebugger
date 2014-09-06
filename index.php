@@ -20,5 +20,7 @@ include_once $debuggerDir. '/lib/Debug.php';
 $Debugger = new pantheraDebugger;
 $Debugger -> cleanup();
 
-if (!in_array(__FILE__, get_included_files()))
-    $Debugger -> displayOverlay();
+if (!is_dir($Debugger::$debuggerPath. '/dumps'))
+    mkdir($Debugger::$debuggerPath. '/dumps');
+
+$Debugger -> displayOverlay();

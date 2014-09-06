@@ -445,25 +445,28 @@ class pantheraDebugger extends pSingleton
 		 * Clean up old files
 		 */
 
-		$dumpsDir = self::getContentDir('dumps/');
-		$files = scandir($dumpsDir);
-
+		$dumpsDir = 'dumps/';
+		$files = $this -> db -> get('sessions');
+        
 		if (!isset($this -> config['requestsMaxCount']))
 			$this -> config['requestsMaxCount'] = 10;
             
-		if ((count($files)-2) > $this -> config['requestsMaxCount'])
+		if (count($files) > $this -> config['requestsMaxCount'])
 		{
 		    $this -> log('Cleaning up dumps directory', 'pantheraDebugger', 1000);
 		    $list = array();
 
-			foreach ($files as $file)
+			foreach ($files as $file => $requestName)
 			{
 			    if ($file == '..' or $file == '.')
                     continue;
                 
+                $path = self::getContentDir($dumpsDir. '/' .$file);
+                
 			    $list[] = array(
-                    'fileName' => $dumpsDir. '/' .$file,
-                    'modificationDate' => filemtime($dumpsDir. '/' .$file),
+			        'sessionKey' => $file,
+                    'fileName' => $path,
+                    'modificationDate' => filemtime($path),
                 );
 			}
             
@@ -474,12 +477,10 @@ class pantheraDebugger extends pSingleton
             $diff = (count($files) - $this -> config['requestsMaxCount']);
             $sessions = $this -> db -> get('sessions');
             
-            var_dump($sessions);
-            
             for ($i=0; $i < $diff; $i++)
             {
-                unlink($dumpsdir. '/' .$list[$i]['fileName']);
-                unset($sessions[$list[$i]['fileName']]);
+                unlink($list[$i]['fileName']);
+                unset($sessions[$list[$i]['sessionKey']]);
             }
             
             $this -> db -> set('sessions', $sessions);
@@ -508,7 +509,7 @@ class pantheraDebugger extends pSingleton
 		fclose($fp);
         
         $sessions = $this -> db -> get('sessions');
-        $sessions[$fileName] = $data['requestName'];
+        $sessions[$fileName] = $data['requestName']. ' (' .date('H:i:s'). ', ' .microtime(). ')';
         $this -> db -> set('sessions', $sessions);        $this -> db -> save();
         
 		return is_file($dumpsDir. '/' .$fileName);
