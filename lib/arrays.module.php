@@ -301,13 +301,28 @@ class arrays
         // fail if the path is empty
         if (empty($path)) 
             throw new Exception('Path cannot be empty');
+
+		if ($path == '/')
+		{
+			$r = array();
+
+			foreach ($array as $key => $value)
+			{
+				if (is_array($value))
+					$value = array();
+
+				$r[$key] = $value;
+			}
+
+			return $r;
+		}
     
         // remove all leading and trailing slashes
         $path = trim($path, $delimiter);
-    
+
         // use current array as the initial value
         $value = $array;
-    
+
         // extract parts of the path
         $parts = explode($delimiter, $path);
     

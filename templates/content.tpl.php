@@ -43,39 +43,58 @@ if (!function_exists('overlayContent'))
     				<span><a>Panthera Debugger</a></span>
     				
                     <div class="userBar">
-                        <select id="sessionSelection" onchange="window.location.href = '?sessionKey='+this.value;">';
-                        
-                        <?php
-                        foreach ($debugger -> db -> sessions as $sessionKey => $sessionName)
-                            print('<option value="' .$sessionKey. '" ' .($fileName == $sessionKey ? 'selected' : ''). '>' .$sessionName. '</option>');
-                        ?>
-                        </select>
+						<?php
+						if ($debugger -> db -> sessions )
+						{
+						?>
+							<select id="sessionSelection" onchange="window.location.href = '?sessionKey='+this.value;">';
+
+							<?php
+							foreach ($debugger -> db -> sessions as $sessionKey => $sessionName)
+								print('<option value="' .$sessionKey. '" ' .($fileName == $sessionKey ? 'selected' : ''). '>' .$sessionName. '</option>');
+							?>
+							</select>
+						<?php
+						}
+						?>
                     </div>
     			</div>
     			
     			<!-- Menubar -->
+
+				<?php
+				if ($debugger -> db -> sessions and $debuggerData['data'])
+				{
+				?>
     
     			<div id="menuBarVisibleLayer">
     				<div class="centerWithContent" id="menuBar">
                         <?php
-    					foreach ($debuggerData['data'] as $key => $value)
-    					{
-    						if ($value['data'] or isset($value['template']))
-    						{
-    							?><span class="menuItem">
-    								<a onclick="showTable('<?=$key;?>');">
-    									<img src="<?=$debugger->debuggerWebroot;?>/webroot/transparent.png" class="pantheraIcon menuIcon" alt="<?=$value['title'];?>">
-    									<span class="menuText"><?=$value['title'];?></span>
-    								</a>
-    							</span>
-    							<?php
-    						}
-    					}
-                        ?>
-    					</div>
+							foreach ($debuggerData['data'] as $key => $value)
+							{
+								if ($value['data'] or isset($value['template']))
+								{
+									?><span class="menuItem">
+										<a onclick="showTable('<?=$key;?>');">
+											<img src="<?=$debugger->debuggerWebroot;?>/webroot/transparent.png" class="pantheraIcon menuIcon" alt="<?=$value['title'];?>">
+											<span class="menuText"><?=$value['title'];?></span>
+										</a>
+									</span>
+									<?php
+								}
+							}
+						?>
+    				</div>
     			</div>
+				<?php
+				} else {
+				?>
+				<div style="text-align: center;">No dump selected, and/or no dumps avaliable. Please connect debugger with your application to generate dumps to analyze.</div>
+				<?php
+				}
+				?>
     		</div>
-    
+
     		<div id="ajaxResponseContent" class="centerWithContent popupContent">
     		</div>
         </body>

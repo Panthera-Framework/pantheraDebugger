@@ -411,11 +411,12 @@ class pantheraDebugger extends pSingleton
      * @param string $path XPath to get froma array
      */
 
-    public function jsonRequestGetData($tabName='', $fileName='', $path='/')
+    public function jsonRequestGetData($tabName='', $fileName='', $path='')
     {
         if (!$tabName) $tabName = $_GET['tabName'];
         if (!$fileName) $fileName = $_GET['fileName'];
-        if (!$path) $path = $_GET['path'];
+        if (isset($_GET['path']) and $_GET['path']) $path = $_GET['path'];
+		if (!$path) $path = '/';
         
         $sessions = $this -> db -> get('sessions');
         
@@ -423,11 +424,15 @@ class pantheraDebugger extends pSingleton
         {
             $dumpsDir = self::getContentDir('dumps/');
             $data = unserialize(file_get_contents($dumpsDir. '/' .$fileName));
+
             $array = arrays::arrayXpathWalk($data['data'][$tabName], $path);
-            
+
+			print(json_encode($data, JSON_PRETTY_PRINT));
+
             print(json_encode(array(
                 'status' => 'success',
                 'data' => $array,
+				'path' => $path,
             )));
             exit;
         }
@@ -559,7 +564,8 @@ class pantheraDebugger extends pSingleton
         
         $sessions = $this -> db -> get('sessions');
         $sessions[$fileName] = $data['requestName']. ' (' .date('H:i:s'). ', ' .microtime(). ')';
-        $this -> db -> set('sessions', $sessions);        $this -> db -> save();
+        $this -> db -> set('sessions', $sessions);
+        $this -> db -> save();
         
 		return is_file($dumpsDir. '/' .$fileName);
 	}
@@ -573,7 +579,9 @@ class pantheraDebugger extends pSingleton
 
 	public static function getContentDir($path)
 	{
-		if (file_exists($path))
+		if(defined('DEBUGGER_CONTENT_PATH') and file_exists(DEBUGGER_CONTENT_PATH. '/' .$path))
+			return DEBUGGER_CONTENT_PATH. '/' .$path;
+		elseif (file_exists($path))
 			return $path;
 		elseif (file_exists(self::$debuggerPath. '/' .$path))
 			return self::$debuggerPath. '/' .$path;
